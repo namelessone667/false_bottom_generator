@@ -3,8 +3,8 @@ This is a simple command line tool that is used to generate cutout plan (for a C
 
 You will need:
 1) falsebottomgenerator.exe executable and falsebottom.cfg config file
-2) Cygwin unix shell emulator or cygwin libraries (included in this repository)
-3) LibreCAD - this is an opensource 2D CAD software
+2) Cygwin unix shell emulator ( download at https://www.cygwin.com/ ) or cygwin libraries (included in this repository)
+3) LibreCAD - this is an opensource 2D CAD software ( download at https://librecad.org/ )
 
 How to generate you own custom false bottom cutout plan:
 1) Copy the falsebottomgenerator.exe executable and falsebottom.cfg config file into the same directory
