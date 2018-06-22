@@ -9,7 +9,7 @@
 double minlength;
 bool calculateNewEndPoints(double radius, double startx, double starty, double endx, double endy, double &startx2, double &starty2, double &endx2, double &endy2);
 
-void printElipse2(double basex, double basey, double endx, double endy, double width, std::ofstream &myfile)
+double printElipse2(double basex, double basey, double endx, double endy, double width, std::ofstream &myfile, double &area)
 {
   double ax, ay, bx, by, cx, cy, dx, dy;
   double side = sqrt(2*(width/2)*(width/2));
@@ -53,43 +53,30 @@ void printElipse2(double basex, double basey, double endx, double endy, double w
   myfile << basex << "," <<  basey << "\n";
   myfile << dx << "," <<  dy << "\n";
 
+  area = PI*(width/2)*(width/2) + length*width;
 
+  return 2*length + PI*width;
 }
 
 
-void printElipse(double basex, double basey, double endx, double width, std::ofstream &myfile)
-{
-  myfile << "line\n";
-  myfile << basex+(width/2) << "," << basey-(width/2) << "\n";
-  myfile << endx-(width/2) << "," <<  basey-(width/2) << "\n";
-  myfile << "line\n";
-  myfile << basex+(width/2) << "," <<  basey+(width/2) << "\n";
-  myfile << endx-(width/2) << "," <<  basey+(width/2) << "\n";
-  myfile << "arc\n";
-  myfile << basex+(width/2) << "," <<  basey-(width/2) << "\n";
-  myfile << basex << "," <<  basey << "\n";
-  myfile << basex+(width/2) << "," <<  basey+(width/2) << "\n";
-  myfile << "arc\n";
-  myfile << endx-(width/2) << "," <<  basey-(width/2) << "\n";
-  myfile << endx << "," <<  basey << "\n";
-  myfile << endx-(width/2) << "," <<  basey+(width/2) << "\n";
-  //myfile << "setrelativezero\n";
-  //myfile << basex << "," <<  basey << "\n";
-}
-
-void printCircle(double centerx, double centery, double radius, std::ofstream &myfile)
+double printCircle(double centerx, double centery, double radius, std::ofstream &myfile, double &area)
 {
   myfile << "circle\n";
   myfile << centerx << "," << centery << "\n";
   myfile << centerx << "," << centery + radius << "\n";
+
+  area = PI*radius*radius;
+  return 2*PI*radius;
 }
 
-bool printRow(double x, double y, double length, double width, double offsety, double offsetangle, double centerx, double centery, double radius, std::ofstream &myfile)
+double printRow(double x, double y, double length, double width, double offsety, double offsetangle, double centerx, double centery, double radius, std::ofstream &myfile, double &area)
 {
-  bool ret = false;
+  area = 0;
+  double ret = 0;
   bool b1;
   double startx = x, starty = y, endx, endy;
   double fixedx, fixedx2, fixedy, fixedy2;
+  double area2;
   while(true)
   {
     endx = startx+length*cos(offsetangle * PI / 180);
@@ -100,8 +87,8 @@ bool printRow(double x, double y, double length, double width, double offsety, d
       break;
     if(sqrt((fixedx2 - fixedx)*(fixedx2 - fixedx)+(fixedy2 - fixedy)*(fixedy2 - fixedy)) >= minlength)
     {
-      printElipse2(fixedx,fixedy,fixedx2, fixedy2,width, myfile);
-      ret = true;
+      ret += printElipse2(fixedx,fixedy,fixedx2, fixedy2,width, myfile, area2);
+      area += area2;
     }
     starty+=offsety;
 
@@ -213,6 +200,9 @@ int main() {
     double border;
     char pattern;
     double angleoffset;
+    double cutLength = 0;
+    double cutArea = 0;
+    double cicrleArea = 0;
 
     std::ifstream configFile;
     configFile.open ("falsebottom.cfg", std::ios::in);
@@ -296,18 +286,21 @@ int main() {
     std::ofstream myfile;
     myfile.open ("librecad.txt", std::ios::trunc);
 
-    printCircle(x,y,radius, myfile);
+    cutLength = printCircle(x,y,radius, myfile, cicrleArea);
 
-    bool b1, b2;
+    double b1 = 0, b2 = 0;
     bool reverse = false;
     double startangle = angleoffset;
+    double area1, area2;
 
     while(true)
     {
-      b1 = printRow(x+offsetx/2,y,length, width, offsety+width, angleoffset, startx, starty, radius-border, myfile);
-      b2 = printRow(x+offsetx/2,y - offsety-width,length, width, -offsety-width, angleoffset, startx, starty, radius-border, myfile);
+      b1 = printRow(x+offsetx/2,y,length, width, offsety+width, angleoffset, startx, starty, radius-border, myfile, area1);
+      b2 = printRow(x+offsetx/2,y - offsety-width,length, width, -offsety-width, angleoffset, startx, starty, radius-border, myfile, area2);
 
-      if(!b1 && !b2)
+      cutArea += area1 + area2;
+
+      if(b1 == 0 && b2 == 0)
       {
         if(reverse)
           break;
@@ -324,13 +317,17 @@ int main() {
 
       }
 
+      cutLength += b1 + b2;
+
       x += offsetx + length*cos(angleoffset * PI / 180);
       y = starty;
       angleoffset *= -1;
     }
 
-
-
     myfile.close();
+
+    std::cout << "Cut length: " << cutLength << " mm" << '\n';
+    std::cout << "Cut area: " << cutArea << " mm2" << '\n';
+    std::cout << "Cut ratio: " << (cutArea / cicrleArea)*100 << " %" << '\n';
     return 0;
 }
